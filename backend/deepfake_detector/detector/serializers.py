@@ -1,7 +1,7 @@
 from rest_framework import serializers
-from .models import Detection
 
-class DetectionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Detection
-        fields = ['id', 'image', 'result', 'timestamp']
+class ImageUploadSerializer(serializers.Serializer):
+    image = serializers.CharField(required=True)
+    
+class VideoUploadSerializer(serializers.Serializer):
+    video = serializers.FileField(required=True)

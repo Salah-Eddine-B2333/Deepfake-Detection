@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -91,6 +92,32 @@ DATABASES = {
     }
 }
 
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Create temp directories for video processing
+TEMP_VIDEO_DIR = os.path.join(MEDIA_ROOT, 'temp_videos')
+os.makedirs(TEMP_VIDEO_DIR, exist_ok=True)
+
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True  # For development only
+
+# Rest Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+}
+
+# File upload settings - increase for videos
+DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

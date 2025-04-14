@@ -27,11 +27,12 @@ const Nav = () => {
               Contact
             </li>
           </Link>
-          <Link spy={true} smooth={true} to="Projects">
-            <li className="my-4 py-4 border-b border-slate-800 hover:bg-slate-800 hover:rounded">
-              Projects
+          <a href="https://github.com/Salah-Eddine-B2333/Deepfake-Detection.git" target="_blank" rel="noopener noreferrer">
+            <li className="transition border-b-2 border-slate-900 hover:border-blue-600 cursor-pointer">
+              Source-code
             </li>
-          </Link>
+          </a>
+
           <Link spy={true} smooth={true} to="Contact">
             <li className="my-4 py-4 border-b border-slate-800 hover:bg-slate-800 hover:rounded">
               About
@@ -66,11 +67,12 @@ const Nav = () => {
                   Contact
                 </li>
               </Link>
-              <Link spy={true} smooth={true} to="Projects">
-                <li className=" transition border-b-2 border-slate-900 hover:border-blue-600 cursor-pointer">
-                  Projects
+              <a href="https://github.com/Salah-Eddine-B2333/Deepfake-Detection.git" target="_blank" rel="noopener noreferrer">
+                <li className="transition border-b-2 border-slate-900 hover:border-blue-600 cursor-pointer">
+                  Source-code
                 </li>
-              </Link>
+              </a>
+
               <Link spy={true} smooth={true} to="Contact">
                 <li className=" transition border-b-2 border-slate-900 hover:border-blue-600 cursor-pointer">
                   About

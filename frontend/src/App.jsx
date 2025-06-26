@@ -1,8 +1,18 @@
 import { useState, useRef } from "react";
 import PropTypes from "prop-types";
-import Nav from "./Components/Nav";
-import Plus from "./assets/Plus.png";
-import Picture from "./assets/AI.jpeg";
+
+// Placeholder assets since we can't import actual files
+const PlusIcon = () => (
+  <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+  </svg>
+);
+
+const Nav = () => (
+  <nav className="container mx-auto px-4 py-4">
+    <h1 className="text-xl font-bold text-white">AI Deepfake Detector</h1>
+  </nav>
+);
 
 // File upload container
 const FileUploadButton = ({ type, onFileChange, acceptedFormats }) => {
@@ -22,10 +32,10 @@ const FileUploadButton = ({ type, onFileChange, acceptedFormats }) => {
   return (
     <div className="text-white bg-slate-900 h-60 max-w-screen-2xl font-bold rounded-3xl flex items-center justify-center flex-col my-5">
       <button
-        className="bg-blue-600 rounded-xl my-3 h-16 w-56 flex items-center justify-center space-x-3"
+        className="bg-blue-600 rounded-xl my-3 h-16 w-56 flex items-center justify-center space-x-3 hover:bg-blue-700 transition-colors"
         onClick={handleUploadClick}
       >
-        <img src={Plus} alt="Plus Icon" className="w-7" />
+        <PlusIcon />
         <span>Upload {type}</span>
       </button>
       <input
@@ -37,7 +47,7 @@ const FileUploadButton = ({ type, onFileChange, acceptedFormats }) => {
           .map((format) => `${type === "Image" ? "image/" : "video/"}${format}`)
           .join(",")}
       />
-      <span className="text-sm">Drop a {type.toLowerCase()} or Paste URL</span>
+      <span className="text-sm">Drop a {type.toLowerCase()} or click to upload</span>
 
       <div className="flex items-center justify-center flex-row text-sm space-x-3 pt-5">
         <div>Supported formats:</div>
@@ -54,7 +64,6 @@ const FileUploadButton = ({ type, onFileChange, acceptedFormats }) => {
   );
 };
 
-// PropTypes validation
 FileUploadButton.propTypes = {
   type: PropTypes.oneOf(["Image", "Video"]).isRequired,
   onFileChange: PropTypes.func.isRequired,
@@ -65,7 +74,7 @@ FileUploadButton.propTypes = {
 const App = () => {
   const [activeTab, setActiveTab] = useState("Image");
   const [file, setFile] = useState(null);
-  const [fileURL, setFileURL] = useState(Picture);
+  const [fileURL, setFileURL] = useState(null);
   const [processedMedia, setProcessedMedia] = useState(null);
   const [detectionResults, setDetectionResults] = useState(null);
   const [videoResults, setVideoResults] = useState(null);
@@ -84,7 +93,7 @@ const App = () => {
 
   const clearUpload = () => {
     setFile(null);
-    setFileURL(Picture);
+    setFileURL(null);
     setProcessedMedia(null);
     setDetectionResults(null);
     setVideoResults(null);
@@ -129,6 +138,7 @@ const App = () => {
           return;
         }
 
+        // Handle the response from Django API
         setProcessedMedia(data.processed_image);
         setDetectionResults(data.results);
       } catch (error) {
@@ -167,8 +177,13 @@ const App = () => {
       }
 
       const data = await response.json();
+      console.log("Video detection response:", data);
+
+      // Check for faces in the video based on Django response structure
+      const detectionResults = data.detection_results;
       
-      if (data.detection_results.frames_with_faces === 0) {
+      // Check if percentage method exists and has frames with faces
+      if (detectionResults?.percentage_method?.frames_with_faces === 0) {
         setError("No faces detected in the video");
         setIsLoading(false);
         return;
@@ -192,47 +207,126 @@ const App = () => {
     }
   };
 
-  // Render video results
+  // Render video results with the Django backend response structure
   const renderVideoResults = () => {
     if (!videoResults) return null;
 
-    const { 
-      frames_with_faces, 
-      frames_with_deepfakes, 
-      deepfake_percentage, 
-      is_likely_deepfake, 
-      confidence 
-    } = videoResults;
+    const finalDecision = videoResults.final_decision;
+    const percentageMethod = videoResults.percentage_method;
+    const statisticalMethod = videoResults.statistical_method;
+    const temporalMethod = videoResults.temporal_method;
+    const clusteringMethod = videoResults.clustering_method;
+    const lstmMethod = videoResults.LSTM_method;
 
     return (
       <div className="w-full max-w-md space-y-4">
         <h3 className="text-2xl font-bold mb-4 text-center">
           Video Detection Results
         </h3>
+
+        {/* Main decision box */}
         <div
-          className={`p-4 rounded-lg shadow-lg ${
-            is_likely_deepfake
+          className={`p-4 rounded-lg shadow-lg ${finalDecision.is_deepfake
               ? "bg-red-500/30 border-2 border-red-500"
               : "bg-green-500/30 border-2 border-green-500"
-          }`}
+            }`}
         >
           <div className="flex justify-between items-center mb-2">
-            <span className="font-bold text-lg">Analysis Result</span>
+            <span className="font-bold text-lg">Final Analysis</span>
             <span
-              className={`font-semibold ${
-                is_likely_deepfake ? "text-red-400" : "text-green-400"
-              }`}
+              className={`font-semibold ${finalDecision.is_deepfake ? "text-red-400" : "text-green-400"
+                }`}
             >
-              {is_likely_deepfake ? "Likely Deepfake" : "Likely Real"}
+              {finalDecision.is_deepfake ? "Likely Deepfake" : "Likely Real"}
             </span>
           </div>
           <div className="space-y-2 text-sm">
-            <div>Confidence: {confidence.toFixed(2)}%</div>
-            <div>Frames with faces: {frames_with_faces}</div>
-            <div>Frames with deepfakes: {frames_with_deepfakes}</div>
-            <div>Deepfake percentage: {deepfake_percentage.toFixed(2)}%</div>
+            <div>Confidence: {finalDecision.confidence?.toFixed(2)}%</div>
+            <div>Method Agreement: {finalDecision.method_agreement}</div>
           </div>
         </div>
+
+        {/* Percentage method results -------------------------------------------------------------------------------------------------------------------------------*/}
+        {percentageMethod && (
+          <div className="p-4 rounded-lg bg-slate-800/70 shadow-lg">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-bold">Frame Analysis</span>
+              <span className={`text-sm ${percentageMethod.is_deepfake ? "text-red-400" : "text-green-400"}`}>
+                {percentageMethod.is_deepfake ? "Deepfake" : "Real"}
+              </span>
+            </div>
+            <div className="space-y-1 text-sm">
+              <div>Frames with faces: {percentageMethod.frames_with_faces}</div>
+              <div>Deepfake frames: {percentageMethod.frames_with_deepfakes}</div>
+              <div>Deepfake ratio: {percentageMethod.deepfake_percentage?.toFixed(2)}%</div>
+            </div>
+          </div>
+        )}
+
+        {/* Statistical method results ---------------------------------------------------------------------------------------------------------------------------------------------*/}
+        {statisticalMethod && (
+          <div className="p-4 rounded-lg bg-slate-800/70 shadow-lg">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-bold">Statistical Analysis</span>
+              <span className={`text-sm ${statisticalMethod.is_deepfake ? "text-red-400" : "text-green-400"}`}>
+                {statisticalMethod.is_deepfake ? "Deepfake" : "Real"}
+              </span>
+            </div>
+            <div className="space-y-1 text-sm">
+              <div>Mean confidence: {statisticalMethod.mean_confidence?.toFixed(3)}</div>
+              <div>Weighted confidence: {statisticalMethod.weighted_confidence?.toFixed(3)}</div>
+              <div>Standard deviation: {statisticalMethod.std_deviation?.toFixed(3)}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Temporal method results--------------------------------------------------------------------------------------------------------------------------------------- */}
+        {temporalMethod && (
+          <div className="p-4 rounded-lg bg-slate-800/70 shadow-lg">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-bold">Temporal Analysis</span>
+              <span className={`text-sm ${temporalMethod.is_deepfake ? "text-red-400" : "text-green-400"}`}>
+                {temporalMethod.is_deepfake ? "Deepfake" : "Real"}
+              </span>
+            </div>
+            <div className="space-y-1 text-sm">
+              <div>Avg confidence change: {temporalMethod.avg_confidence_change?.toFixed(3)}</div>
+              <div>Max confidence change: {temporalMethod.max_confidence_change?.toFixed(3)}</div>
+              <div>Sustained pattern: {temporalMethod.sustained_pattern?.toFixed(3)}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Clustering method results -------*/}
+        {clusteringMethod && (
+          <div className="p-4 rounded-lg bg-slate-800/70 shadow-lg">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-bold">Clustering Analysis</span>
+              <span className={`text-sm ${clusteringMethod.is_deepfake ? "text-red-400" : "text-green-400"}`}>
+                {clusteringMethod.is_deepfake ? "Deepfake" : "Real"}
+              </span>
+            </div>
+            <div className="space-y-1 text-sm">
+              <div>Fake cluster %: {clusteringMethod.fake_cluster_percentage?.toFixed(2)}%</div>
+              <div>Cluster means: [{clusteringMethod.cluster_means?.map(m => m.toFixed(3)).join(', ')}]</div>
+            </div>
+          </div>
+        )}
+
+        {/* LSTM method results ---------------------------------------------------------------------------------------------------------------------*/}
+        {lstmMethod && (
+          <div className="p-4 rounded-lg bg-slate-800/70 shadow-lg">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-bold">LSTM Analysis</span>
+              <span className={`text-sm ${lstmMethod.is_deepfake ? "text-red-400" : "text-green-400"}`}>
+                {lstmMethod.is_deepfake ? "Deepfake" : "Real"}
+              </span>
+            </div>
+            <div className="space-y-1 text-sm">
+              <div>LSTM Confidence: {(lstmMethod.Confidence_LSTM * 100)?.toFixed(2)}%</div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -242,7 +336,7 @@ const App = () => {
       <header className="bg-black/30 shadow-md">
         <Nav />
       </header>
-      
+
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-center mb-8 text-white drop-shadow-lg">
           Deepfake Detection AI
@@ -251,11 +345,10 @@ const App = () => {
         {/* Tab buttons */}
         <div className="flex justify-center gap-4 mb-6">
           <button
-            className={`px-6 py-2 rounded-lg font-bold transition-colors ${
-              activeTab === "Image"
+            className={`px-6 py-2 rounded-lg font-bold transition-colors ${activeTab === "Image"
                 ? "bg-blue-600 text-white"
                 : "bg-slate-700 hover:bg-slate-600"
-            }`}
+              }`}
             onClick={() => {
               setActiveTab("Image");
               clearUpload();
@@ -264,11 +357,10 @@ const App = () => {
             Image Detection
           </button>
           <button
-            className={`px-6 py-2 rounded-lg font-bold transition-colors ${
-              activeTab === "Video"
+            className={`px-6 py-2 rounded-lg font-bold transition-colors ${activeTab === "Video"
                 ? "bg-blue-600 text-white"
                 : "bg-slate-700 hover:bg-slate-600"
-            }`}
+              }`}
             onClick={() => {
               setActiveTab("Video");
               clearUpload();
@@ -296,7 +388,7 @@ const App = () => {
         </div>
 
         {/* Results area */}
-        {(fileURL !== Picture || processedMedia) && (
+        {(fileURL || processedMedia) && (
           <div className="bg-black/50 rounded-2xl p-6 mt-8 space-y-6">
             <div className="flex justify-center space-x-4">
               {file && (
@@ -309,9 +401,8 @@ const App = () => {
                     Clear
                   </button>
                   <button
-                    className={`bg-green-700 hover:bg-green-900 rounded-lg text-white font-bold px-6 py-2 transition-colors ${
-                      isLoading ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                    className={`bg-green-700 hover:bg-green-900 rounded-lg text-white font-bold px-6 py-2 transition-colors ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
                     onClick={handleDetect}
                     disabled={isLoading}
                   >
@@ -330,17 +421,50 @@ const App = () => {
             <div className="flex flex-col md:flex-row gap-8 items-center justify-center">
               <div className="w-full max-w-xl">
                 {activeTab === "Image" ? (
-                  <img
-                    src={processedMedia || fileURL}
-                    alt="Preview"
-                    className="rounded-lg shadow-2xl max-h-[500px] w-full object-contain"
-                  />
+                  <div className="flex flex-col gap-4">
+                    {fileURL && !processedMedia && (
+                      <div>
+                        <h4 className="text-lg font-semibold mb-2">Original Image</h4>
+                        <img
+                          src={fileURL}
+                          alt="Original Upload"
+                          className="rounded-lg shadow-lg max-h-[300px] w-full object-contain"
+                        />
+                      </div>
+                    )}
+                    {processedMedia && (
+                      <div>
+                        <h4 className="text-lg font-semibold mb-2">Processed Image</h4>
+                        <img
+                          src={processedMedia}
+                          alt="Processed"
+                          className="rounded-lg shadow-lg max-h-[300px] w-full object-contain"
+                        />
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <video
-                    src={processedMedia || fileURL}
-                    controls
-                    className="rounded-lg shadow-2xl max-h-[500px] w-full"
-                  />
+                  <div>
+                    {processedMedia ? (
+                      <>
+                        <h4 className="text-lg font-semibold mb-2">Processed Video</h4>
+                        <video
+                          src={processedMedia}
+                          controls
+                          className="rounded-lg shadow-2xl max-h-[400px] w-full"
+                        />
+                      </>
+                    ) : fileURL ? (
+                      <>
+                        <h4 className="text-lg font-semibold mb-2">Original Video</h4>
+                        <video
+                          src={fileURL}
+                          controls
+                          className="rounded-lg shadow-2xl max-h-[400px] w-full"
+                        />
+                      </>
+                    ) : null}
+                  </div>
                 )}
               </div>
 
@@ -352,31 +476,30 @@ const App = () => {
                   {detectionResults.map((result, index) => (
                     <div
                       key={index}
-                      className={`p-4 rounded-lg shadow-lg ${
-                        result.is_deepfake 
-                          ? 'bg-red-500/30 border-2 border-red-500' 
+                      className={`p-4 rounded-lg shadow-lg ${result.is_deepfake
+                          ? 'bg-red-500/30 border-2 border-red-500'
                           : 'bg-green-500/30 border-2 border-green-500'
-                      }`}
+                        }`}
                     >
                       <div className="flex justify-between items-center mb-2">
                         <span className="font-bold text-lg">
                           Face {index + 1}
                         </span>
-                        <span className={`font-semibold ${
-                          result.is_deepfake ? 'text-red-400' : 'text-green-400'
-                        }`}>
+                        <span className={`font-semibold ${result.is_deepfake ? 'text-red-400' : 'text-green-400'
+                          }`}>
                           {result.is_deepfake ? "Deepfake" : "Real"}
                         </span>
                       </div>
-                      <div className="text-sm">
-                        Confidence: {(result.confidence * 100).toFixed(2)}%
+                      <div className="space-y-1 text-sm">
+                        <div>Confidence: {(result.confidence * 100).toFixed(2)}%</div>
+                        <div>Position: [{result.face_coordinates.join(', ')}]</div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              {activeTab === "Video" && renderVideoResults()}
+              {activeTab === "Video" && videoResults && renderVideoResults()}
             </div>
           </div>
         )}
